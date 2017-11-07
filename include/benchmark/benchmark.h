@@ -202,7 +202,7 @@ BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
 
 #if defined(__GNUC__)
 #define BENCHMARK_UNUSED __attribute__((unused))
-#define BENCHMARK_ALWAYS_INLINE __attribute__((always_inline))
+#define BENCHMARK_ALWAYS_INLINE inline __attribute__((always_inline))
 #define BENCHMARK_NOEXCEPT noexcept
 #define BENCHMARK_NOEXCEPT_OP(x) noexcept(x)
 #elif defined(_MSC_VER) && !defined(__clang__)
@@ -218,7 +218,7 @@ BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
 #define __func__ __FUNCTION__
 #else
 #define BENCHMARK_UNUSED
-#define BENCHMARK_ALWAYS_INLINE
+#define BENCHMARK_ALWAYS_INLINE inline
 #define BENCHMARK_NOEXCEPT
 #define BENCHMARK_NOEXCEPT_OP(x)
 #endif
@@ -302,7 +302,7 @@ BENCHMARK_UNUSED static int stream_init_anchor = InitializeStreams();
 // See: https://youtu.be/nXaxk27zwlk?t=2441
 #ifndef BENCHMARK_HAS_NO_INLINE_ASSEMBLY
 template <class Tp>
-inline BENCHMARK_ALWAYS_INLINE void DoNotOptimize(Tp const& value) {
+BENCHMARK_ALWAYS_INLINE void DoNotOptimize(Tp const& value) {
   // Clang doesn't like the 'X' constraint on `value` and certain GCC versions
   // don't like the 'g' constraint. Attempt to placate them both.
 #if defined(__clang__)
@@ -313,22 +313,22 @@ inline BENCHMARK_ALWAYS_INLINE void DoNotOptimize(Tp const& value) {
 }
 // Force the compiler to flush pending writes to global memory. Acts as an
 // effective read/write barrier
-inline BENCHMARK_ALWAYS_INLINE void ClobberMemory() {
+BENCHMARK_ALWAYS_INLINE void ClobberMemory() {
   asm volatile("" : : : "memory");
 }
 #elif defined(_MSC_VER)
 template <class Tp>
-inline BENCHMARK_ALWAYS_INLINE void DoNotOptimize(Tp const& value) {
+BENCHMARK_ALWAYS_INLINE void DoNotOptimize(Tp const& value) {
   internal::UseCharPointer(&reinterpret_cast<char const volatile&>(value));
   _ReadWriteBarrier();
 }
 
-inline BENCHMARK_ALWAYS_INLINE void ClobberMemory() {
+BENCHMARK_ALWAYS_INLINE void ClobberMemory() {
   _ReadWriteBarrier();
 }
 #else
 template <class Tp>
-inline BENCHMARK_ALWAYS_INLINE void DoNotOptimize(Tp const& value) {
+BENCHMARK_ALWAYS_INLINE void DoNotOptimize(Tp const& value) {
   internal::UseCharPointer(&reinterpret_cast<char const volatile&>(value));
 }
 // FIXME Add ClobberMemory() for non-gnu and non-msvc compilers
@@ -433,7 +433,7 @@ class State {
     if (BENCHMARK_BUILTIN_EXPECT(!started_, false)) {
       StartKeepRunning();
     }
-    bool const res = --total_iterations_;
+    bool const res = (--total_iterations_) != 0;
     if (BENCHMARK_BUILTIN_EXPECT(!res, false)) {
       FinishKeepRunning();
     }
@@ -642,10 +642,10 @@ struct State::StateIterator {
   State* const parent_;
 };
 
-BENCHMARK_ALWAYS_INLINE inline State::StateIterator State::begin() {
+BENCHMARK_ALWAYS_INLINE State::StateIterator State::begin() {
   return StateIterator(this);
 }
-BENCHMARK_ALWAYS_INLINE inline State::StateIterator State::end() {
+BENCHMARK_ALWAYS_INLINE State::StateIterator State::end() {
   StartKeepRunning();
   return StateIterator();
 }
